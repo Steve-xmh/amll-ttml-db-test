@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import prettier from "prettier";
+import { uid } from "uid/secure";
 import { execSync } from "child_process";
 import { Octokit } from "octokit";
 import { parseLyric } from "./ttml-parser.js";
@@ -34,6 +35,15 @@ function parseBody(body) {
 		}
 	}
 	return params;
+}
+
+function getMetadata(ttml, key) {
+	const metadata = ttml.metadata.filter((v) => v.key === key).map((v) => v.value);
+	const result = [];
+	metadata.forEach(meta => {
+		result.push(...meta);
+	});
+	return result;
 }
 
 async function main() {
@@ -172,10 +182,6 @@ async function main() {
 				const body = issue.body?.split("\n")?.filter((v) => v.length > 0) ?? [];
 				const params = parseBody(body);
 				const lyricURL = params["TTML 歌词文件下载直链"];
-				const musicIds = String(params["音乐对应的网易云音乐 ID"])
-					.split(",")
-					.map((v) => parseInt(v.trim()))
-					.filter((v) => v > 0 && Number.isSafeInteger(v));
 				if (typeof lyricURL !== "string") {
 					console.log(
 						"议题",
@@ -185,17 +191,6 @@ async function main() {
 						") 无法找到 TTML 歌词文件下载直链",
 					);
 					await declineIssue("无法找到 TTML 歌词文件下载直链");
-					continue;
-				}
-				if (musicIds.length === 0) {
-					console.log(
-						"议题",
-						issue.title,
-						"(",
-						issue.id,
-						") 无法识别到对应的网易云音乐 ID",
-					);
-					await declineIssue("无法识别到对应的网易云音乐 ID");
 					continue;
 				}
 				console.log("正在下载 TTML 歌词文件", lyricURL.trim());
@@ -208,8 +203,47 @@ async function main() {
 						}
 					});
 					try {
-						const parsedLyric = parseLyric(lyric, true);
-						const errors = checkLyric(parsedLyric);
+						const parsedLyric = parseLyric(lyric);
+						const errors = [];
+						const musicPlatformKeys = [
+							"ncmMusicId",
+							"qqMusicId",
+							"spotifyId",
+							"appleMusicId",
+						];
+						let containsId = false;
+						for (const key of musicPlatformKeys) {
+							if (getMetadata(parsedLyric, key).length > 0) {
+								containsId = true;
+								break;
+							}
+						}
+						if (getMetadata(parsedLyric, "musicName").length > 0) {
+							containsId = true;
+							break;
+						}
+						if (getMetadata(parsedLyric, "artists").length > 0) {
+							containsId = true;
+							break;
+						}
+						if (getMetadata(parsedLyric, "album").length > 0) {
+							containsId = true;
+							break;
+						}
+						if (issue.user) {
+							parsedLyric.metadata.push({
+								key: "ttmlAuthorGithub",
+								value: [`${issue.user.id}`],
+							});
+							parsedLyric.metadata.push({
+								key: "ttmlAuthorGithubLogin",
+								value: [`${issue.user.login}`],
+							});
+						}
+						if (!containsId) {
+							errors.push("歌词文件中未包含任何音乐平台 ID");
+						}
+						errors.push(...checkLyric(parsedLyric.lyricLines));
 						if (errors.length > 0) {
 							const errMsg = [
 								"歌词检查发现以下错误，请修正后重新提交：",
@@ -245,15 +279,12 @@ async function main() {
 							execSync("git checkout main");
 							try {
 								execSync("git branch -D " + submitBranch);
-							} catch {}
+							} catch { }
 							execSync("git checkout --force -b " + submitBranch);
-							await Promise.all(
-								musicIds.map(async (v) => {
-									await writeFile(resolve("..", "lyrics", `${v}.ttml`), lyric);
-								}),
-							);
+							const newFileName = `${Date.now()}-${issue.user?.id || "0"}-${uid(8)}.ttml`;
+							await writeFile(resolve("..", "raw-lyrics", newFileName), lyric);
 							execSync("git add ..");
-							execSync(`git commit -m "提交歌曲歌词 #${issue.number}"`);
+							execSync(`git commit -m "提交歌曲歌词 ${newFileName} #${issue.number}"`);
 							execSync("git push --set-upstream origin " + submitBranch);
 							execSync("git checkout main");
 							let pullBody = [
@@ -263,10 +294,6 @@ async function main() {
 								issue.user?.login
 									? "@" + issue.user?.login
 									: "未知，请查看议题发送者",
-								"### 歌词关联歌曲 ID",
-								...musicIds.map((v) => `- \`${v}\``),
-								"### 歌词关联歌曲链接",
-								...musicIds.map((v) => `- https://music.163.com/song?id=${v}`),
 								"### 歌词文件内容",
 								"```xml",
 								regeneratedLyric,
@@ -284,12 +311,6 @@ async function main() {
 									issue.user?.login
 										? "@" + issue.user?.login
 										: "未知，请查看议题发送者",
-									"### 歌词关联歌曲 ID",
-									...musicIds.map((v) => `- \`${v}\``),
-									"### 歌词关联歌曲链接",
-									...musicIds.map(
-										(v) => `- https://music.163.com/song?id=${v}`,
-									),
 									"### 歌词文件内容",
 									"```xml",
 									"<!-- 因数据过大请自行查看变更 -->",
@@ -307,12 +328,6 @@ async function main() {
 										issue.user?.login
 											? "@" + issue.user?.login
 											: "未知，请查看议题发送者",
-										"### 歌词关联歌曲 ID",
-										...musicIds.map((v) => `- \`${v}\``),
-										"### 歌词关联歌曲链接",
-										...musicIds.map(
-											(v) => `- https://music.163.com/song?id=${v}`,
-										),
 										"### 歌词文件内容",
 										"```xml",
 										"<!-- 因数据过大请自行查看变更 -->",
