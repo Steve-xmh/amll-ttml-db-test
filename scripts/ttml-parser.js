@@ -25,8 +25,8 @@ function parseLyricInner(ttmlDoc) {
 	let mainAgentId = "v1";
 
 	const metadata = [];
-	for (const meta of ttmlDoc.querySelectorAll("meta")) {
-		if (meta.tagName === "amll:meta") {
+	for (const meta of ttmlDoc.querySelectorAll("amll\\:meta")) {
+		if (meta.tagName.toLowerCase() === "amll:meta") {
 			const key = meta.getAttribute("key");
 			if (key) {
 				const value = meta.getAttribute("value");
