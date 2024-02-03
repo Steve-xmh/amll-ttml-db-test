@@ -219,16 +219,13 @@ async function main() {
 							}
 						}
 						if (getMetadata(parsedLyric, "musicName").length > 0) {
-							containsId = true;
-							break;
+							errors.push("歌词文件中未包含歌曲名称信息（缺失 musicName 元数据）");
 						}
 						if (getMetadata(parsedLyric, "artists").length > 0) {
-							containsId = true;
-							break;
+							errors.push("歌词文件中未包含音乐作者信息（缺失 artists 元数据）");
 						}
 						if (getMetadata(parsedLyric, "album").length > 0) {
-							containsId = true;
-							break;
+							errors.push("歌词文件中未包含专辑信息（缺失 album 元数据）");
 						}
 						if (issue.user) {
 							parsedLyric.metadata.push({
