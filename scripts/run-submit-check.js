@@ -218,7 +218,7 @@ async function main() {
 								containsId = true;
 								pullMetadataMessage.push(`### ${musicPlatformKeyLabelPairs[key]}`);
 								for (const id of ids) {
-									if (/^(?!\.)(?!com[0-9]$)(?!con$)(?!lpt[0-9]$)(?!nul$)(?!prn$)[^\|\*\?\\:<>/$"]*[^\.\|\*\?\\:<>/$"]+$/.test(id)) {
+									if (!(/^(?!\.)(?!com[0-9]$)(?!con$)(?!lpt[0-9]$)(?!nul$)(?!prn$)[^\|\*\?\\:<>/$"]*[^\.\|\*\?\\:<>/$"]+$/.test(id))) {
 										errors.push(
 											`歌词文件中的 ${key} 元数据包含非法字符：${JSON.stringify(id)}`,
 										);
