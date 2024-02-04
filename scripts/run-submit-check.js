@@ -223,7 +223,7 @@ async function main() {
 											`歌词文件中的 ${key} 元数据包含非法字符：${JSON.stringify(id)}`,
 										);
 									} else {
-										pullMetadataMessage.push(`- \`${musicPlatformKeyLabelPairs[key]}\``);
+										pullMetadataMessage.push(`- \`${id}\``);
 									}
 								}
 							}
