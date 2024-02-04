@@ -93,12 +93,6 @@ async function main() {
 						].join("\n");
 					}
 				}
-				await octokit.rest.issues.lock({
-					owner: REPO_OWNER,
-					repo: REPO_NAME,
-					issue_number: issue.number,
-					lock_reason: "resolved",
-				});
 				await octokit.rest.issues.createComment({
 					owner: REPO_OWNER,
 					repo: REPO_NAME,
@@ -111,6 +105,12 @@ async function main() {
 					issue_number: issue.number,
 					state: "closed",
 					state_reason: "completed",
+				});
+				await octokit.rest.issues.lock({
+					owner: REPO_OWNER,
+					repo: REPO_NAME,
+					issue_number: issue.number,
+					lock_reason: "resolved",
 				});
 			}
 			async function declineIssue(msg, err = null, lyric = "") {
@@ -129,18 +129,18 @@ async function main() {
 							: []),
 					].join("\n"),
 				});
-				await octokit.rest.issues.lock({
-					owner: REPO_OWNER,
-					repo: REPO_NAME,
-					issue_number: issue.number,
-					lock_reason: "resolved",
-				});
 				await octokit.rest.issues.update({
 					owner: REPO_OWNER,
 					repo: REPO_NAME,
 					issue_number: issue.number,
 					state: "closed",
 					state_reason: "completed",
+				});
+				await octokit.rest.issues.lock({
+					owner: REPO_OWNER,
+					repo: REPO_NAME,
+					issue_number: issue.number,
+					lock_reason: "resolved",
 				});
 			}
 			if (
