@@ -186,34 +186,47 @@ async function main() {
 					try {
 						const parsedLyric = parseLyric(lyric);
 						const errors = [];
-						const musicPlatformKeys = [
-							"ncmMusicId",
-							"qqMusicId",
-							"spotifyId",
-							"appleMusicId",
-						];
+						const musicPlatformKeyLabelPairs = {
+							"ncmMusicId": "歌曲关联网易云音乐 ID",
+							"qqMusicId": "歌曲关联 QQ 音乐 ID",
+							"spotifyId": "歌曲关联 Spotify 音乐 ID",
+							"appleMusicId": "歌曲关联 Apple Music 音乐 ID",
+						};
 						let containsId = false;
-						for (const key of musicPlatformKeys) {
+						const pullMetadataMessage = [];
+						const musicName = getMetadata(parsedLyric, "musicName");
+						const artists = getMetadata(parsedLyric, "artists");
+						const album = getMetadata(parsedLyric, "album");
+						if (musicName.length === 0) {
+							errors.push("歌词文件中未包含歌曲名称信息（缺失 musicName 元数据）");
+						}
+						if (artists.length === 0) {
+							errors.push("歌词文件中未包含音乐作者信息（缺失 artists 元数据）");
+						}
+						if (album.length === 0) {
+							errors.push("歌词文件中未包含专辑信息（缺失 album 元数据）(注：如果是单曲专辑请和歌曲名称同名)");
+						}
+						pullMetadataMessage.push("### 音乐名称");
+						musicName.forEach(v => pullMetadataMessage.push(`- \`${v}\``));
+						pullMetadataMessage.push("### 音乐作者");
+						artists.forEach(v => pullMetadataMessage.push(`- \`${v}\``));
+						pullMetadataMessage.push("### 音乐专辑名称");
+						album.forEach(v => pullMetadataMessage.push(`- \`${v}\``));
+						for (const key in musicPlatformKeyLabelPairs) {
 							const ids = getMetadata(parsedLyric, key);
 							if (ids.length > 0) {
 								containsId = true;
+								pullMetadataMessage.push(`### ${musicPlatformKeyLabelPairs[key]}`);
 								for (const id of ids) {
 									if (/^(?!\.)(?!com[0-9]$)(?!con$)(?!lpt[0-9]$)(?!nul$)(?!prn$)[^\|\*\?\\:<>/$"]*[^\.\|\*\?\\:<>/$"]+$/.test(id)) {
 										errors.push(
 											`歌词文件中的 ${key} 元数据包含非法字符：${JSON.stringify(id)}`,
 										);
+									} else {
+										pullMetadataMessage.push(`- \`${musicPlatformKeyLabelPairs[key]}\``);
 									}
 								}
 							}
-						}
-						if (getMetadata(parsedLyric, "musicName").length === 0) {
-							errors.push("歌词文件中未包含歌曲名称信息（缺失 musicName 元数据）");
-						}
-						if (getMetadata(parsedLyric, "artists").length === 0) {
-							errors.push("歌词文件中未包含音乐作者信息（缺失 artists 元数据）");
-						}
-						if (getMetadata(parsedLyric, "album").length === 0) {
-							errors.push("歌词文件中未包含专辑信息（缺失 album 元数据）");
 						}
 						if (issue.user) {
 							parsedLyric.metadata.push({
@@ -279,6 +292,7 @@ async function main() {
 								issue.user?.login
 									? "@" + issue.user?.login
 									: "未知，请查看议题发送者",
+									...pullMetadataMessage,
 								"### 歌词文件内容",
 								"```xml",
 								regeneratedLyric,
@@ -296,6 +310,7 @@ async function main() {
 									issue.user?.login
 										? "@" + issue.user?.login
 										: "未知，请查看议题发送者",
+										...pullMetadataMessage,
 									"### 歌词文件内容",
 									"```xml",
 									"<!-- 因数据过大请自行查看变更 -->",
