@@ -5,7 +5,7 @@ import { addFileToGit, commit, getMetadata, isGitWorktreeClean, push } from "./u
 
 async function overrideSymLink(src, dest) {
     const target = resolve(dest);
-    const linkString = relative(dest, resolve(src));
+    const linkString = relative(resolve(dest), src);
     console.trace("  正在创建符号链接", target, "->", linkString);
     try {
         await symlink(linkString, target);
