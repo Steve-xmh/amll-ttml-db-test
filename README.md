@@ -1,3 +1,6 @@
+> [!WARNING]
+> 本仓库是用于测试用途的克隆歌词数据库，仅作为测试提交流程和文件结构使用，请不要在此提交任何歌词！
+
 # AMLL TTML Database
 
 作者特供给 AMLL 的 TTML 逐词歌词库，也欢迎大家前来建设本仓库！
@@ -36,6 +39,19 @@
 - [Taylor Swift,Brendon Urie - ME! (feat. Brendon Urie of Panic! At The Disco) （含对唱/背景人声歌词）](./lyrics/1361348080.ttml)
 
 （歌词文件非常标准的也可以在 PR 时给本列表增加项目）
+
+## 使用歌词数据库
+
+如果你想要接入本歌词数据库，可以通过各类以平台类型区分的文件夹，用您对应平台的音乐ID来获取歌词文件。
+
+现阶段支持以下平台的歌词索引：
+
+- [Netease Cloud Music - 网易云音乐](./ncm-lyrics) （注：原 `lyrics` 文件夹依然保留且一并同步，但不再推荐使用该路径）
+- [QQ Music - QQ 音乐](./qq-lyrics)
+- [Apple Music](./apple-lyrics)
+- [Spotify](./spotify-lyrics)
+
+如果需要检索从建立数据库开始至今所有的歌词文件，可以访问 [./raw-lyrics](./raw-lyrics) 文件夹，内部的文件以 `[提交UNIX时间戳]-[提交者GithubID]-[8位随机ID].ttml` 命名。
 
 ## 共享协议
 

@@ -8,43 +8,12 @@ import { exportTTMLText } from "./ttml-writer.js";
 import { writeFile } from "fs/promises";
 import { resolve } from "path";
 import { checkLyric } from "./lyric-checker.js";
+import { HAS_CHECKED_MARK, REPO_NAME, REPO_OWNER, addFileToGit, checkoutBranch, commit, createBranch, deleteBranch, getMetadata, githubToken, parseBody, push } from "./utils.js";
 
-const githubToken = process.env.GITHUB_TOKEN;
 const octokit = new Octokit({
 	auth: githubToken,
 	userAgent: "AMLLTTMLDBSubmitChecker",
 });
-const [REPO_OWNER, REPO_NAME] = process.env.GITHUB_REPOSITORY?.split("/") ?? [
-	"Steve-xmh",
-	"amll-ttml-db",
-];
-
-const HAS_CHECKED_MARK = "<!-- AMLL-DB-BOT-CHECKED -->";
-
-function parseBody(body) {
-	const params = {};
-	let curKey = "";
-	for (const line of body) {
-		if (line.startsWith("### ")) {
-			curKey = line.substring(4).trim();
-			params[curKey] = "";
-		} else if (line.startsWith("```")) {
-			continue;
-		} else {
-			params[curKey] += line + "\n";
-		}
-	}
-	return params;
-}
-
-function getMetadata(ttml, key) {
-	const metadata = ttml.metadata.filter((v) => v.key === key).map((v) => v.value);
-	const result = [];
-	metadata.forEach(meta => {
-		result.push(...meta);
-	});
-	return result;
-}
 
 async function main() {
 	const openingIssues = await octokit.rest.issues.listForRepo({
@@ -124,6 +93,12 @@ async function main() {
 						].join("\n");
 					}
 				}
+				await octokit.rest.issues.lock({
+					owner: REPO_OWNER,
+					repo: REPO_NAME,
+					issue_number: issue.number,
+					lock_reason: "resolved",
+				});
 				await octokit.rest.issues.createComment({
 					owner: REPO_OWNER,
 					repo: REPO_NAME,
@@ -153,6 +128,12 @@ async function main() {
 							? ["获取到的歌词数据：", "```xml", ...lyric.split("\n"), "```"]
 							: []),
 					].join("\n"),
+				});
+				await octokit.rest.issues.lock({
+					owner: REPO_OWNER,
+					repo: REPO_NAME,
+					issue_number: issue.number,
+					lock_reason: "resolved",
 				});
 				await octokit.rest.issues.update({
 					owner: REPO_OWNER,
@@ -213,9 +194,16 @@ async function main() {
 						];
 						let containsId = false;
 						for (const key of musicPlatformKeys) {
-							if (getMetadata(parsedLyric, key).length > 0) {
+							const ids = getMetadata(parsedLyric, key);
+							if (ids.length > 0) {
 								containsId = true;
-								break;
+								for (const id of ids) {
+									if (/^(?!\.)(?!com[0-9]$)(?!con$)(?!lpt[0-9]$)(?!nul$)(?!prn$)[^\|\*\?\\:<>/$"]*[^\.\|\*\?\\:<>/$"]+$/.test(id)) {
+										errors.push(
+											`歌词文件中的 ${key} 元数据包含非法字符：${JSON.stringify(id)}`,
+										);
+									}
+								}
 							}
 						}
 						if (getMetadata(parsedLyric, "musicName").length === 0) {
@@ -273,17 +261,17 @@ async function main() {
 						);
 						try {
 							const submitBranch = "auto-submit-issue-" + issue.number;
-							execSync("git checkout main");
+							await checkoutBranch("main");
 							try {
-								execSync("git branch -D " + submitBranch);
+								await deleteBranch(submitBranch);
 							} catch { }
-							execSync("git checkout --force -b " + submitBranch);
+							await createBranch(submitBranch);
 							const newFileName = `${Date.now()}-${issue.user?.id || "0"}-${uid(8)}.ttml`;
 							await writeFile(resolve("..", "raw-lyrics", newFileName), lyric);
-							execSync("git add ..");
-							execSync(`git commit -m "提交歌曲歌词 ${newFileName} #${issue.number}"`);
-							execSync("git push --set-upstream origin " + submitBranch);
-							execSync("git checkout main");
+							await addFileToGit("..");
+							await commit(`提交歌曲歌词 ${newFileName} #${issue.number}`);
+							await push(submitBranch);
+							await checkoutBranch("main");
 							let pullBody = [
 								"### 歌词议题",
 								"#" + issue.number,
