@@ -1,16 +1,18 @@
 import { symlink, mkdir, readFile, readdir, rm } from "fs/promises";
-import { resolve } from "path/posix";
+import { resolve, join, relative } from "path/posix";
 import { parseLyric } from "./ttml-parser.js";
 import { addFileToGit, commit, getMetadata, isGitWorktreeClean, push } from "./utils.js";
-import { join } from "path";
 
 async function overrideSymLink(src, dest) {
+    const target = resolve(dest);
+    const linkString = relative(dest, src);
+    console.trace("  正在创建符号链接", target, "->", linkString);
     try {
-        await symlink(src, dest);
+        await symlink(linkString, target);
     } catch (e) {
         if (e.code === "EEXIST") {
-            await rm(dest);
-            await symlink(src, dest);
+            await rm(target);
+            await symlink(linkString, target);
         } else {
             throw e;
         }
