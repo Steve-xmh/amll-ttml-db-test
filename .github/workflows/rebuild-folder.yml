@@ -3,6 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
+    paths: 
+      - 'scripts/**'
+      - 'raw-lyrics/**'
 concurrency:
   group: check-submit
   cancel-in-progress: true
