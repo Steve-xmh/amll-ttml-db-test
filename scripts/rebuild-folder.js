@@ -1,11 +1,11 @@
 import { symlink, mkdir, readFile, readdir, rm } from "fs/promises";
-import { resolve, join, relative } from "path/posix";
+import { resolve, join, relative, dirname } from "path/posix";
 import { parseLyric } from "./ttml-parser.js";
 import { addFileToGit, commit, getMetadata, isGitWorktreeClean, push } from "./utils.js";
 
 async function overrideSymLink(src, dest) {
     const target = resolve(dest);
-    const linkString = relative(dest, resolve(src));
+    const linkString = relative(dirname(dest), resolve(src));
     console.log("  正在创建符号链接", target, "->", linkString);
     try {
         await symlink(linkString, target);
@@ -44,20 +44,20 @@ async function main() {
         const lyric = parseLyric(lyricContent);
 
         for (const id of getMetadata(lyric, "ncmMusicId")) {
-            await overrideSymLink(filePath, resolve("../lyrics", `${id}.ttml`));
-            await overrideSymLink(filePath, resolve("../ncm-lyrics", `${id}.ttml`));
+            await overrideSymLink(filePath, join("../lyrics", `${id}.ttml`));
+            await overrideSymLink(filePath, join("../ncm-lyrics", `${id}.ttml`));
         }
 
         for (const id of getMetadata(lyric, "spotifyId")) {
-            await overrideSymLink(filePath, resolve("../spotify-lyrics", `${id}.ttml`));
+            await overrideSymLink(filePath, join("../spotify-lyrics", `${id}.ttml`));
         }
 
         for (const id of getMetadata(lyric, "qqMusicId")) {
-            await overrideSymLink(filePath, resolve("../qq-lyrics", `${id}.ttml`));
+            await overrideSymLink(filePath, join("../qq-lyrics", `${id}.ttml`));
         }
 
         for (const id of getMetadata(lyric, "appleMusicId")) {
-            await overrideSymLink(filePath, resolve("../am-lyrics", `${id}.ttml`));
+            await overrideSymLink(filePath, join("../am-lyrics", `${id}.ttml`));
         }
     }
     console.log("文件夹重建完毕！");
