@@ -163,6 +163,7 @@ async function main() {
 				const body = issue.body?.split("\n")?.filter((v) => v.length > 0) ?? [];
 				const params = parseBody(body);
 				const lyricURL = params["TTML 歌词文件下载直链"];
+				const comment = params["备注"].trim().split("\n");
 				if (typeof lyricURL !== "string") {
 					console.log(
 						"议题",
@@ -197,14 +198,18 @@ async function main() {
 						const musicName = getMetadata(parsedLyric, "musicName");
 						const artists = getMetadata(parsedLyric, "artists");
 						const album = getMetadata(parsedLyric, "album");
+						let addToolsUsageTip = false;
 						if (musicName.length === 0) {
 							errors.push("歌词文件中未包含歌曲名称信息（缺失 musicName 元数据）");
+							addToolsUsageTip = true;
 						}
 						if (artists.length === 0) {
 							errors.push("歌词文件中未包含音乐作者信息（缺失 artists 元数据）");
+							addToolsUsageTip = true;
 						}
 						if (album.length === 0) {
 							errors.push("歌词文件中未包含专辑信息（缺失 album 元数据）(注：如果是单曲专辑请和歌曲名称同名)");
+							addToolsUsageTip = true;
 						}
 						pullMetadataMessage.push("### 音乐名称");
 						musicName.forEach(v => pullMetadataMessage.push(`- \`${v}\``));
@@ -240,6 +245,10 @@ async function main() {
 						}
 						if (!containsId) {
 							errors.push("歌词文件中未包含任何音乐平台 ID");
+							addToolsUsageTip = true;
+						}
+						if (addToolsUsageTip) {
+							errors.push("（注：如果你正在使用 AMLL TTML Tools 歌词编辑工具，可以通过顶部菜单 编辑 - 编辑歌曲元数据 来编辑元数据）");
 						}
 						errors.push(...checkLyric(parsedLyric.lyricLines));
 						if (errors.length > 0) {
@@ -292,7 +301,9 @@ async function main() {
 								issue.user?.login
 									? "@" + issue.user?.login
 									: "未知，请查看议题发送者",
-									...pullMetadataMessage,
+								...pullMetadataMessage,
+								"### 备注",
+								...comment,
 								"### 歌词文件内容",
 								"```xml",
 								regeneratedLyric,
@@ -310,7 +321,9 @@ async function main() {
 									issue.user?.login
 										? "@" + issue.user?.login
 										: "未知，请查看议题发送者",
-										...pullMetadataMessage,
+									...pullMetadataMessage,
+									"### 备注",
+									...comment,
 									"### 歌词文件内容",
 									"```xml",
 									"<!-- 因数据过大请自行查看变更 -->",
