@@ -1,23 +1,7 @@
-import { symlink, mkdir, readFile, readdir, rm } from "fs/promises";
-import { resolve, join, relative, dirname } from "path/posix";
+import { mkdir, readFile, readdir, rm, copyFile } from "fs/promises";
+import { resolve, join } from "path/posix";
 import { parseLyric } from "./ttml-parser.js";
 import { addFileToGit, commit, getMetadata, isGitWorktreeClean, push } from "./utils.js";
-
-async function overrideSymLink(src, dest) {
-    const target = resolve(dest);
-    const linkString = relative(dirname(dest), resolve(src));
-    console.log("  正在创建符号链接", target, "->", linkString);
-    try {
-        await symlink(linkString, target);
-    } catch (e) {
-        if (e.code === "EEXIST") {
-            await rm(target);
-            await symlink(linkString, target);
-        } else {
-            throw e;
-        }
-    }
-}
 
 async function main() {
     console.log("正在重新构建文件夹");
@@ -44,20 +28,20 @@ async function main() {
         const lyric = parseLyric(lyricContent);
 
         for (const id of getMetadata(lyric, "ncmMusicId")) {
-            await overrideSymLink(filePath, join("../lyrics", `${id}.ttml`));
-            await overrideSymLink(filePath, join("../ncm-lyrics", `${id}.ttml`));
+            await copyFile(filePath, join("../lyrics", `${id}.ttml`));
+            await copyFile(filePath, join("../ncm-lyrics", `${id}.ttml`));
         }
 
         for (const id of getMetadata(lyric, "spotifyId")) {
-            await overrideSymLink(filePath, join("../spotify-lyrics", `${id}.ttml`));
+            await copyFile(filePath, join("../spotify-lyrics", `${id}.ttml`));
         }
 
         for (const id of getMetadata(lyric, "qqMusicId")) {
-            await overrideSymLink(filePath, join("../qq-lyrics", `${id}.ttml`));
+            await copyFile(filePath, join("../qq-lyrics", `${id}.ttml`));
         }
 
         for (const id of getMetadata(lyric, "appleMusicId")) {
-            await overrideSymLink(filePath, join("../am-lyrics", `${id}.ttml`));
+            await copyFile(filePath, join("../am-lyrics", `${id}.ttml`));
         }
     }
     console.log("文件夹重建完毕！");
